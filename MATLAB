@@ -1,0 +1,172 @@
+%% EMG Muscle Fatigue Signal Analysis
+
+clear;
+close all;
+clc;
+
+%% Import raw data from text file
+
+raw_data=load('Subject.txt');
+
+% Allocate time and voltages to variables
+time=raw_data(1:end,1);
+voltages=raw_data(1:end,2);
+
+L=length(voltages);
+T=length(time);
+
+t=tiledlayout(3,2);
+
+%%  Plotting raw EMG data
+
+nexttile;
+plot(time,voltages)
+xlabel('Time (s)');
+ylabel('Voltage (mV)');
+title('Raw Signal');
+grid
+
+%% Fast Fourier Transfer - to find Cut-Off frequencies for BP filter
+
+% sampling frequency
+fs=500;
+
+% Frequency resolution = fs/L
+% Frequency range for Fast Fourier Transform (FFT)
+% FFT frequency range is defined as frequency resolution from 0 to 1/2 data length
+
+f=fs*(0:(L/2))/L;
+
+% Finding and plotting FFT
+
+p=fft(voltages);
+
+p=abs(p/L);
+
+p=p(1:L/2+1);
+p(2:end-1)=2*p(2:end-1);
+
+nexttile;
+plot(f,p);
+xlabel('Frequency (Hz)');
+ylabel('Intensity');
+title('Fast Fourier Transform');
+ylim([0 0.03]);
+grid
+
+%% Band-Pass Filter
+
+% Filtering from 20Hz to 240Hz
+
+fnyq=fs/2;
+fcuthigh=20;
+fcutlow=249;
+
+% 4th order butterworth Band-Pass Filter
+
+[b,a]=butter(4,[fcuthigh,fcutlow]/fnyq,'bandpass');
+
+voltages=filtfilt(b,a,voltages);
+
+% Filtering the 50Hz and 100Hz out
+% Compare the data sets with each other
+
+[b1,a1]=butter(4,[49.9,50.1]/fnyq,'stop');
+voltages=filtfilt(b1,a1,voltages);
+
+[b2,a2]=butter(4,[99.9,100.1]/fnyq,'stop');
+voltages=filtfilt(b2,a2,voltages);
+
+[b3,a3]=butter(4,[199.9,200.1]/fnyq,'stop');
+voltages=filtfilt(b3,a3,voltages);
+
+
+%% Spectogram
+
+fspec=[5 240];
+fsp=500;
+
+nexttile;
+[Pxx,f1] = periodogram(voltages,kaiser(L,50),[],fs);
+medfreq(Pxx,f1);
+
+nexttile;
+spectrogram(voltages,128,120,128,fsp,'yaxis');
+colormap jet;
+caxis([-40 -10]);
+
+%% Re-Plot the FFT after filtration
+
+p=fft(voltages);
+
+p=abs(p/L);
+
+p=p(1:L/2+1);
+p(2:end-1)=2*p(2:end-1);
+
+nexttile;
+plot(f,p);
+xlabel('Frequency (Hz)');
+ylabel('Intensity');
+title('Re-Plot Fast Fourier Transform');
+ylim([0 0.03]);
+grid
+
+%% Plotting signal with Band-Pass signal and rectification applied
+
+nexttile;
+rec_signal = abs(voltages);
+plot(time,rec_signal);
+xlabel('Time (s)');
+ylabel('Voltage (mV)');
+title('Filtered & Rectified Signal with RMS envelope');
+grid
+hold on
+
+%% Moving Average
+
+% Window Size in Milliseconds (ms)
+window=500;
+envelope=sqrt(movmean((rec_signal.^2),window));
+
+%% Plotting Moving Average and Filtered & Rectified Signal
+
+plot(time,envelope,'r','linewidth',2);
+xlabel('Time (s)');
+ylabel('Voltage (mV)');
+ylim([0 1.5]);
+
+grid
+%% Plotting 200ms time windows of EMG signal at different points of fatigue
+
+figure;
+t2=tiledlayout(3,1);
+
+firstlim=(T/4)/500;
+secondlim=(T/2)/500;
+thirdlim=((3*T)/4)/500;
+
+nexttile;
+plot(time, rec_signal);
+xlabel('Time (s)');
+ylabel('Voltage (mV)');
+title('First');
+xlim([firstlim firstlim+1]);
+
+nexttile;
+plot(time, rec_signal);
+xlabel('Time (s)');
+ylabel('Voltage (mV)');
+title('Second');
+xlim([secondlim secondlim+1]);
+
+nexttile;
+plot(time, rec_signal);
+xlabel('Time (s)');
+ylabel('Voltage (mV)');
+title('Third');
+xlim([thirdlim thirdlim+1]);
+
+
+
+

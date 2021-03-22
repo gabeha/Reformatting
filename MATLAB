@@ -1,4 +1,4 @@
-%% EMG Muscle Fatigue Signal Analysis
+%% EMG Muscle Fatigue Signal Analysis adapted from https://www.youtube.com/watch?v=c3v5Kd2ivKs&ab_channel=ThatsEngineering
 
 clear;
 close all;
